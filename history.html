@@ -1,0 +1,16 @@
+<table border="1">
+<tr>
+    <th>Время</th>
+    <th>Тип</th>
+    <th>Файл</th>
+    <th>Количество людей</th>
+</tr>
+{% for record in history %}
+<tr>
+    <td>{{ record.timestamp }}</td>
+    <td>{{ record.type }}</td>
+    <td><a href="{{ record.filename }}" target="_blank">Смотреть</a></td>
+    <td>{{ record.people_count }}</td>
+</tr>
+{% endfor %}
+</table>

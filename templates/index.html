@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Guest Counter</title>
+    <style>
+        /* Сброс стилей и базовые шрифты */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f5f6fa;
+            color: #2f3640;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        h2, h3 {
+            margin-bottom: 15px;
+            color: #353b48;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 650px;
+        }
+
+        input[type="file"] {
+            margin-bottom: 15px;
+        }
+
+        button {
+            background: #4cd137;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #44bd32;
+        }
+
+        img, video {
+            margin-top: 15px;
+            border-radius: 12px;
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        hr {
+            margin: 40px 0;
+            border: none;
+            height: 1px;
+            background: #dcdde1;
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .stream-controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .stream-status {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        #peopleCount {
+            color: #e84118;
+            font-weight: bold;
+        }
+
+        .upload-form {
+    background: #ffffff;
+    padding: 25px 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    max-width: 500px;
+    width: 100%;
+    margin: 20px auto;
+}
+
+.file-label {
+    display: inline-block;
+    background: #f1f3f6;
+    padding: 12px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #2f3640;
+    transition: background 0.3s;
+}
+
+.file-label:hover {
+    background: #e0e4ea;
+}
+
+.file-label input[type="file"] {
+    display: none;
+}
+
+.upload-form button {
+    background: linear-gradient(135deg, #4cd137, #44bd32);
+    color: #fff;
+    border: none;
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(76, 209, 55, 0.3);
+}
+
+.upload-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(76, 209, 55, 0.4);
+}
+    </style>
+</head>
+<body>
+
+<h2>Подсчёт гостей в кафе</h2>
+
+<hr>
+
+<h3>Загрузка фото</h3>
+
+<form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+    <div style="margin-bottom: 10px;">
+        <span id="imageFileName" style="color: #2f3640;">Файл не выбран</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <label class="file-label">
+            Выберите файл
+            <input type="file" name="image" required onchange="showFileName(this)">
+        </label>
+        <button type="submit">Обработать фото</button>
+    </div>
+</form>
+
+
+
+{% if count %}
+    <h3>Найдено гостей: {{ count }}</h3>
+    <img src="{{ result_image }}" alt="Обработанное изображение">
+{% endif %}
+
+<hr>
+
+<h3>Загрузка видео</h3>
+
+<form action="/upload_video" method="post" enctype="multipart/form-data" class="upload-form">
+    <div style="margin-bottom: 10px;">
+        <span id="videoFileName" style="color: #2f3640;">Файл не выбран</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <label class="file-label">
+            Выберите файл
+            <input type="file" name="video" accept="video/*" required onchange="showFileName(this)">
+        </label>
+        <button type="submit">Обработать видео</button>
+    </div>
+</form>
+
+{% if video_path %}
+    <h3>Видео обработано. Гостей: {{ video_count }}</h3>
+    <video controls>
+        <source src="{{ video_path }}" type="video/mp4">
+    </video>
+{% endif %}
+
+<hr>
+
+<h3>Онлайн-стрим</h3>
+
+<div class="stream-status">
+    Сейчас в кадре людей: <b id="peopleCount">0</b>
+</div>
+
+<div class="stream-controls">
+    <button onclick="startStream()">Запустить стрим</button>
+    <button onclick="stopStream()">Остановить стрим</button>
+</div>
+
+<div>
+    <img id="streamImage">
+</div>
+
+<script>
+let streamRunning = false;
+
+function showFileName(input) {
+    const fileName = input.files[0]?.name || "Файл не выбран";
+    if (input.name === "image") {
+        document.getElementById("imageFileName").innerText = fileName;
+    } else if (input.name === "video") {
+        document.getElementById("videoFileName").innerText = fileName;
+    }
+}
+
+function startStream() {
+    if (streamRunning) return;
+    document.getElementById("streamImage").src = "/camera";
+    streamRunning = true;
+}
+
+function stopStream() {
+    document.getElementById("streamImage").src = "";
+    streamRunning = false;
+    document.getElementById("peopleCount").innerText = "0";
+}
+
+function updateCount() {
+    if (!streamRunning) return;
+    fetch("/stream_count")
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("peopleCount").innerText = data.people;
+        });
+}
+
+setInterval(updateCount, 1000);
+</script>
+
+<hr>
+
+<h3>Отчет</h3>
+
+<div class="stream-controls">
+    <button onclick="window.location.href='/download_pdf'">Скачать PDF</button>
+    <button onclick="window.location.href='/download_excel'">Скачать Excel</button>
+</div>
+
+</body>
+</html>
